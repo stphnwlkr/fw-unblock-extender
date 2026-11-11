@@ -1,0 +1,54 @@
+name: Publish release
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Stable plugin version (X.Y.Z)
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ inputs.version || github.ref_name }}
+
+jobs:
+  release:
+    if: github.repository == 'stphnwlkr/fw-unblock-extender' && (github.ref == 'refs/heads/main' || github.ref_type == 'tag')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Check plugin syntax
+        run: |
+          php -l fw-unblock-extender.php
+          php -l recipes.php
+          php -l updates.php
+          node --check assets/editor.js
+          node --check assets/code-completions.js
+
+      - name: Package release
+        env:
+          RELEASE_VERSION: ${{ inputs.version || github.ref_name }}
+        run: python3 scripts/build-release.py "$RELEASE_VERSION"
+
+      - name: Publish ZIP and update manifest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ inputs.version || github.ref_name }}
+        run: |
+          args=()
+          if [[ "$GITHUB_REF_TYPE" == tag ]]; then
+            args+=(--verify-tag)
+          fi
+          gh release create "$RELEASE_VERSION" dist/fw-unblock-extender.zip dist/update.json \
+            --draft --target "$GITHUB_SHA" "${args[@]}" \
+            --title "Unblock Extender $RELEASE_VERSION" --notes-file dist/release-notes.md
+          gh release edit "$RELEASE_VERSION" --draft=false --latest

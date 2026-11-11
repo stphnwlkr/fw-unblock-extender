@@ -1,0 +1,164 @@
+.uplink-acss-catalog {
+	--uplink-accent: var(--wp-admin-theme-color, #3858e9);
+	--uplink-border: color-mix(in srgb, currentColor 16%, transparent);
+	--uplink-surface: color-mix(in srgb, currentColor 5%, transparent);
+	color: inherit;
+}
+
+.uplink-acss-toolbar,
+.uplink-acss-results-pane {
+	padding: 14px;
+}
+
+.uplink-acss-toolbar {
+	display: grid;
+	gap: 12px;
+	border-block-end: 1px solid var(--uplink-border);
+	background: var(--uplink-surface);
+}
+
+.uplink-acss-toolbar .components-base-control,
+.uplink-acss-toolbar .components-base-control__field {
+	margin-block-end: 0;
+}
+
+.uplink-acss-segments {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 3px;
+	padding: 3px;
+	border: 1px solid var(--uplink-border);
+	border-radius: 8px;
+}
+
+.uplink-acss-segments .components-button {
+	justify-content: center;
+	min-block-size: 34px;
+	height: auto;
+	padding-inline: 4px;
+	border-radius: 5px;
+	font-weight: 600;
+	white-space: normal;
+	text-align: center;
+}
+
+.uplink-acss-segments [aria-pressed="true"] {
+	background: var(--uplink-accent);
+	color: #fff;
+}
+
+.uplink-acss-segments [aria-pressed="true"]:hover {
+	background: var(--uplink-accent);
+	color: #fff;
+}
+
+.uplink-acss-segments .components-button:focus-visible {
+	outline: 2px solid var(--uplink-accent);
+	outline-offset: 2px;
+}
+
+.uplink-acss-help,
+.uplink-acss-status:not(:empty) {
+	margin: 0 0 12px;
+	padding: 8px 10px;
+	border-inline-start: 2px solid var(--uplink-accent);
+	background: var(--uplink-surface);
+}
+
+.uplink-acss-results {
+	display: grid;
+	gap: 8px;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.uplink-acss-results li {
+	display: grid;
+	gap: 9px;
+	margin: 0;
+	padding: 10px;
+	border: 1px solid var(--uplink-border);
+	border-radius: 8px;
+}
+
+.uplink-acss-result-title {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 6px 8px;
+}
+
+.uplink-acss-result-title code {
+	max-inline-size: 100%;
+	overflow-wrap: anywhere;
+	background: transparent;
+	padding: 0;
+	font-size: 12px;
+}
+
+.uplink-acss-source {
+	padding: 2px 6px;
+	border: 1px solid var(--uplink-border);
+	border-radius: 5px;
+	background: var(--uplink-surface);
+	font-size: 11px;
+}
+
+.uplink-acss-actions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: 6px;
+}
+
+.uplink-acss-actions .components-button {
+	min-block-size: 30px;
+}
+
+.uplink-acss-empty {
+	margin: 0;
+	padding: 14px;
+	border: 1px dashed var(--uplink-border);
+	border-radius: 8px;
+}
+
+.uplink-acss-more {
+	justify-content: center;
+	inline-size: 100%;
+	margin-block-start: 12px;
+}
+
+.uplink-acss-recipe-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.uplink-acss-recipe-form {
+	display: grid;
+	gap: 10px;
+	padding: 10px;
+	margin-block-end: 12px;
+	border: 1px solid var(--uplink-border);
+	border-radius: 8px;
+	background: var(--uplink-surface);
+}
+
+.uplink-acss-recipe-form .components-base-control__field {
+	margin-block-end: 0;
+}
+
+.uplink-acss-recipe-form textarea {
+	font-family: monospace;
+}
+
+.uplink-acss-file {
+	display: grid;
+	gap: 6px;
+	font-weight: 600;
+}
+
+.uplink-acss-file input {
+	max-inline-size: 100%;
+}
