@@ -12,15 +12,16 @@ on:
         type: string
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: release-${{ inputs.version || github.ref_name }}
 
 jobs:
-  release:
+  verify:
     if: github.repository == 'stphnwlkr/fw-unblock-extender' && (github.ref == 'refs/heads/main' || github.ref_type == 'tag')
     runs-on: ubuntu-latest
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -39,9 +40,48 @@ jobs:
           RELEASE_VERSION: ${{ inputs.version || github.ref_name }}
         run: python3 scripts/build-release.py "$RELEASE_VERSION"
 
+      - name: Extract the release ZIP for Plugin Check
+        run: |
+          unzip -q dist/fw-unblock-extender.zip -d dist/scan
+          printf '%s\n' '{"phpVersion":"8.4"}' > .wp-env.json
+
+      - name: Run the full WordPress Plugin Check suite
+        uses: WordPress/plugin-check-action@005058d6dbd2942b6a58610836b981c2ee3cc19d
+        with:
+          build-dir: dist/scan/fw-unblock-extender
+          include-experimental: 'true'
+          error-severity: '1'
+          warning-severity: '1'
+          strict: 'true'
+          # GitHub distribution requires the Update URI flagged by this WordPress.org rule.
+          ignore-codes: plugin_updater_detected
+
+      - name: Store the verified release files
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: verified-release
+          if-no-files-found: error
+          path: |
+            dist/fw-unblock-extender.zip
+            dist/update.json
+            dist/release-notes.md
+
+  release:
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download the verified release files
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: verified-release
+          path: dist
+
       - name: Publish ZIP and update manifest
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           RELEASE_VERSION: ${{ inputs.version || github.ref_name }}
         run: |
           args=()

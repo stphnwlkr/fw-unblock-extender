@@ -18,3 +18,7 @@ Requires WordPress 7.1 or later, PHP 8.4 or later, and the Unblock plugin for ed
 Starting with 0.5.0, stable GitHub releases appear in the WordPress **Plugins** and **Dashboard → Updates** screens. Use **Update now**, or enable automatic updates for this plugin in WordPress. The plugin checks public release metadata on GitHub. Editor data and recipes stay on the WordPress site.
 
 See [RELEASING.md](RELEASING.md) for publishing instructions. Licensed under GPL-2.0-or-later.
+
+## Warranty
+
+Unblock Extender is provided as is, without warranty of any kind, express or implied, including the implied warranties of merchantability and fitness for a particular purpose.

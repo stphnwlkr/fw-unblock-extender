@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Unblock Extender
  * Description: Extends Unblock with class and variable lookup, custom CSS recipes, and editor shortcuts.
- * Version: 0.5.0
+ * Version: 0.5.1
  * Requires at least: 7.1
  * Requires PHP: 8.4
  * Plugin URI: https://github.com/stphnwlkr/fw-unblock-extender
@@ -22,7 +22,7 @@ use Automatic_CSS\Model\Generated_Inventory;
 
 defined( 'ABSPATH' ) || exit;
 
-const VERSION = '0.5.0';
+const VERSION = '0.5.1';
 const HANDLE  = 'fw-unblock-extender';
 
 require_once __DIR__ . '/recipes.php';

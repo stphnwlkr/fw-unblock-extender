@@ -2,7 +2,7 @@
 Requires at least: 7.1
 Tested up to: 7.2
 Requires PHP: 8.4
-Stable tag: 0.5.0
+Stable tag: 0.5.1
 License: GPL-2.0-or-later
 
 Adds class and variable lookup, CSS recipes, and editor shortcuts to Unblock.
@@ -29,7 +29,15 @@ Deactivate the old plugin, install Unblock Extender, and activate it. The new pl
 
 Install version 0.5.0 or later once from the GitHub release ZIP. New stable releases then appear under Plugins and Dashboard > Updates. WordPress can also install them automatically if you enable auto-updates for this plugin. WordPress requests public release metadata from GitHub. Editor data and custom recipes stay on the WordPress site.
 
+== Warranty ==
+
+Unblock Extender is provided as is, without warranty of any kind, express or implied, including the implied warranties of merchantability and fitness for a particular purpose.
+
 == Changelog ==
+
+= 0.5.1 =
+* Corrected translation metadata for recipe imports and documented atomic recipe writes.
+* Added a no-warranty statement and a required Plugin Check step for GitHub releases.
 
 = 0.5.0 =
 * Added WordPress admin updates from public GitHub Releases.
