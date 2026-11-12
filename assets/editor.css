@@ -1,3 +1,26 @@
+.components-dropdown__content .uplink-unblock-menu-position {
+	border-block-start: 1px solid var(--wpds-color-stroke-surface-neutral, #ccc);
+	margin-block-start: 8px;
+	padding-block-start: 8px;
+}
+
+.components-dropdown__content .uplink-unblock-menu-position.is-before-group {
+	border-block-start: 0;
+	border-block-end: 1px solid var(--wpds-color-stroke-surface-neutral, #ccc);
+	margin-block: 0 8px;
+	padding-block: 0 8px;
+}
+
+.components-dropdown__content .uplink-unblock-menu-position > .components-menu-group {
+	padding: 0;
+}
+
+.uplink-unblock-menu-label {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
 .uplink-acss-catalog {
 	--uplink-accent: var(--wp-admin-theme-color, #3858e9);
 	--uplink-border: color-mix(in srgb, currentColor 16%, transparent);

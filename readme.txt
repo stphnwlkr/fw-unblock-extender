@@ -2,7 +2,7 @@
 Requires at least: 7.1
 Tested up to: 7.2
 Requires PHP: 8.4
-Stable tag: 0.5.1
+Stable tag: 0.7.1
 License: GPL-2.0-or-later
 
 Adds class and variable lookup, CSS recipes, and editor shortcuts to Unblock.
@@ -12,6 +12,8 @@ Adds class and variable lookup, CSS recipes, and editor shortcuts to Unblock.
 Unblock Extender reads Unblock's class and variable registry. If Automatic.css is active, its generated classes, variables, and recipes appear automatically.
 
 Site administrators can add CSS recipes or import a JSON file from the Recipes panel. Recipes are shared across the site. To expand a recipe, type its name with a leading question mark and a trailing semicolon inside a CSS rule. For example, type `?card-stack;`. Use `%root%` where a recipe needs to refer to the current selector.
+
+In List View, open a block's options and look for the Unblock group. Use Insert to append a child inside the selected block, or Wrap in to enclose the selection in an Unblock wrapper. On a Group, Convert to Section puts the Group's children in the Section's default Container and carries the Group's HTML anchor, custom classes, and editor name to the Section. The new wrappers use Unblock's default layout and styles.
 
 == Recipe import ==
 
@@ -34,6 +36,17 @@ Install version 0.5.0 or later once from the GitHub release ZIP. New stable rele
 Unblock Extender is provided as is, without warranty of any kind, express or implied, including the implied warranties of merchantability and fitness for a particular purpose.
 
 == Changelog ==
+
+= 0.7.1 =
+* Changed Insert to append inside the selected block where children are supported.
+* Added Unblock icons and positioned the menu group beside the WordPress grouping actions.
+
+= 0.7.0 =
+* Added Insert and Wrap in flyouts to the Unblock group in the block options menu.
+* Renamed the Group conversion to Convert to Section. It uses the Section's default Container.
+
+= 0.6.0 =
+* Added a Group block menu action that converts it to an Unblock Section and Container.
 
 = 0.5.1 =
 * Corrected translation metadata for recipe imports and documented atomic recipe writes.

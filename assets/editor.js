@@ -1,13 +1,15 @@
 (function (wp, catalog) {
 	'use strict';
 
-	const { Button, SearchControl, SelectControl, TextareaControl, TextControl } = wp.components;
-	const { createElement: h, useState } = wp.element;
-	const { __, sprintf } = wp.i18n;
-	const { useSelect, select, dispatch } = wp.data;
-	const { getBlockType, hasBlockSupport } = wp.blocks;
+	const { Button, MenuGroup, MenuItem, NavigableMenu, Popover, SearchControl, SelectControl, TextareaControl, TextControl } = wp.components;
+	const { createElement: h, createPortal, Fragment, useCallback, useId, useLayoutEffect, useMemo, useRef, useState } = wp.element;
+	const { __, isRTL, sprintf } = wp.i18n;
+	const { useSelect, useRegistry, select, dispatch } = wp.data;
+	const {
+		cloneBlock, createBlock, createBlocksFromInnerBlocksTemplate, getBlockType, hasBlockSupport, serialize, store: blocksStore,
+	} = wp.blocks;
 	const { PluginSidebar } = wp.editor;
-	const blockEditor = wp.blockEditor.store;
+	const { BlockIcon, BlockSettingsMenuControls, store: blockEditor } = wp.blockEditor;
 	const domain = 'fw-unblock-extender';
 	const pageSize = 25;
 	const title = __('Unblock Extender', domain);
@@ -134,6 +136,335 @@
 
 	function classNames(value) {
 		return value.trim().split(/\s+/).filter(Boolean);
+	}
+
+	const elementBlock = 'unblock/element';
+	const conditionBlock = 'unblock/condition';
+	const loopBlock = 'unblock/loop';
+	const insertableBlockTypes = [elementBlock, conditionBlock, loopBlock];
+	const unblockActions = [
+		{ variation: 'section', label: __('Section', domain), wrap: true },
+		{ variation: 'container', label: __('Container', domain), wrap: true },
+		{ variation: 'div', label: __('Div', domain), wrap: true },
+		{ variation: 'anchor', label: __('Link', domain), wrap: true },
+		{ variation: 'heading', label: __('Heading', domain) },
+		{ variation: 'paragraph', label: __('Paragraph', domain) },
+		{ variation: 'image', label: __('Image', domain) },
+		{ blockName: conditionBlock, label: __('Condition', domain), wrap: true },
+		{ blockName: loopBlock, label: __('Loop', domain), wrap: true },
+	];
+
+	function canReplaceBlock(editor, clientId) {
+		return editor.getBlockMode(clientId) !== 'html' &&
+			editor.isBlockValid(clientId) &&
+			editor.canEditBlock(clientId) &&
+			editor.canRemoveBlock(clientId);
+	}
+
+	function getMenuSelection(editor, clientIds) {
+		const first = clientIds[0];
+		const root = editor.getBlockRootClientId(first);
+		if (root === null || !clientIds.every((id) => editor.getBlockEditingMode(id) === 'default')) {
+			return null;
+		}
+
+		const siblings = editor.getBlockOrder(root);
+		const ids = siblings.filter((id) => clientIds.includes(id));
+		const start = siblings.indexOf(ids[0]);
+		if (ids.length !== clientIds.length || siblings[start + ids.length - 1] !== ids.at(-1)) {
+			return null;
+		}
+
+		return { ids, root, start };
+	}
+
+	function getInsertRoot(editor, clientId) {
+		if (!clientId || !editor.canEditBlock(clientId) || !editor.isBlockValid(clientId) ||
+			editor.getBlockMode(clientId) === 'html') {
+			return null;
+		}
+		if (editor.getBlockName(clientId) === elementBlock) {
+			const { tagName, content } = editor.getBlockAttributes(clientId);
+			// Unblock stores text inline. These tags also cannot hold the block choices in this menu.
+			if (content !== undefined || /^(area|audio|base|br|col|colgroup|datalist|dl|embed|h[1-6]|head|hr|iframe|img|input|link|meta|ol|optgroup|option|p|param|picture|script|select|source|style|svg|table|tbody|textarea|tfoot|thead|tr|track|ul|video|wbr)$/i.test(tagName)) {
+				return null;
+			}
+		}
+		return clientId;
+	}
+
+	function isLinkBlock(editor, id) {
+		return editor.getBlockName(id) === elementBlock && editor.getBlockAttributes(id)?.tagName?.toLowerCase() === 'a';
+	}
+
+	function makeUnblockBlock(action, children, groupAttributes) {
+		if (!action.variation) {
+			return createBlock(action.blockName, {}, children);
+		}
+
+		const attributes = { ...action.variation.attributes };
+		const defaults = createBlocksFromInnerBlocksTemplate(action.variation.innerBlocks);
+		if (children) {
+			// Unblock's Section variation includes the Container that receives the content.
+			if (action.variation.name === 'section' && defaults[0]) {
+				defaults[0].innerBlocks = children;
+			}
+			if (action.variation.name === 'anchor') {
+				delete attributes.content;
+			}
+		}
+
+		if (groupAttributes) {
+			const { anchor, className, lock, metadata } = groupAttributes;
+			attributes.attrs = { ...attributes.attrs };
+			if (anchor) {
+				attributes.attrs.id = anchor;
+			}
+			if (className) {
+				const classes = classNames([attributes.attrs.class, className].filter(Boolean).join(' '));
+				attributes.attrs.class = [...new Set(classes)].join(' ');
+			}
+			Object.assign(attributes, { lock, metadata });
+		}
+
+		return createBlock(elementBlock, attributes, defaults.length ? defaults : children);
+	}
+
+	const interactiveContent = 'a, button, input, select, textarea, summary, iframe, audio[controls], video[controls], [tabindex], [contenteditable]';
+
+	function canWrapInLink(blocks) {
+		const template = document.createElement('template');
+		template.innerHTML = serialize(blocks);
+		if (template.content.querySelector(interactiveContent)) {
+			return false;
+		}
+
+		function isNonInteractive(block) {
+			const { tagName, attrs, content } = block.attributes;
+			if (block.name === elementBlock && tagName) {
+				// Check the saved tag and interactive attributes without creating that element.
+				const hasInteractiveTag = /^(a|button|input|select|textarea|summary|iframe)$/i.test(tagName) ||
+					(/^(audio|video)$/i.test(tagName) && Object.hasOwn(attrs ?? {}, 'controls'));
+				if (hasInteractiveTag || ['tabindex', 'contenteditable'].some((name) => Object.hasOwn(attrs ?? {}, name))) {
+					return false;
+				}
+			}
+			if (block.name.startsWith('unblock/') && typeof content === 'string') {
+				template.innerHTML = content;
+				if (template.content.querySelector(interactiveContent)) {
+					return false;
+				}
+			}
+			return block.innerBlocks.every(isNonInteractive);
+		}
+
+		return blocks.every(isNonInteractive);
+	}
+
+	function UnblockSubmenu({ kind, label, actions, active, setActive, run }) {
+		const id = useId();
+		const rtl = isRTL();
+		const isOpen = active?.kind === kind;
+		const openKey = rtl ? 'ArrowLeft' : 'ArrowRight';
+		const closeKey = rtl ? 'ArrowRight' : 'ArrowLeft';
+		const focusFirstItem = useCallback((menu) => {
+			if (menu) {
+				requestAnimationFrame(() => {
+					if (menu.isConnected) {
+						menu.querySelector('[role="menuitem"]')?.focus({ preventScroll: true });
+					}
+				});
+			}
+		}, []);
+
+		function close(returnFocus) {
+			if (returnFocus) {
+				active.anchor.focus();
+			}
+			setActive(null);
+		}
+
+		return h(Fragment, null,
+			h(MenuItem, {
+				'aria-haspopup': 'menu',
+				'aria-expanded': isOpen,
+				'aria-controls': isOpen ? id : undefined,
+				suffix: h('span', { 'aria-hidden': true }, rtl ? '‹' : '›'),
+				onClick: (event) => setActive(isOpen ? null : { kind, anchor: event.currentTarget }),
+				onKeyDownCapture: (event) => {
+					if (event.key === openKey || (isOpen && (event.key === 'Escape' || event.key === closeKey))) {
+						event.preventDefault();
+						event.stopPropagation();
+						setActive(event.key === openKey ? { kind, anchor: event.currentTarget } : null);
+					}
+				},
+			}, label),
+			isOpen && h(Popover, {
+				anchor: active.anchor,
+				placement: rtl ? 'left-start' : 'right-start',
+				className: 'components-dropdown__content',
+				shift: true,
+				animate: false,
+				focusOnMount: false,
+				onClose: () => close(true),
+				onFocusOutside: (event) => {
+					const next = event.relatedTarget;
+					if (next && next !== active.anchor && !active.anchor.ownerDocument.getElementById(id)?.contains(next)) {
+						close(false);
+					}
+				},
+				onKeyDown: (event) => {
+					if (event.key === 'Escape') {
+						event.preventDefault();
+						event.stopPropagation();
+						close(true);
+					}
+				},
+			}, h(NavigableMenu, { id, ref: focusFirstItem, 'aria-label': label, className: 'components-dropdown-menu__menu no-icons',
+				onKeyDown: (event) => {
+					// NavigableMenu handles arrows on its DOM node before React receives them.
+					if (event.key === closeKey) {
+						close(true);
+					}
+				},
+			}, actions.map((action) => h(MenuItem, {
+				key: action.variation?.name ?? action.blockName,
+				icon: action.icon && h(BlockIcon, { icon: action.icon }),
+				iconPosition: 'left',
+				onClick: () => run(kind, action),
+			}, action.label)))),
+		);
+	}
+
+	function PositionedUnblockGroup({ children }) {
+		const marker = useRef(null);
+		const [host, setHost] = useState(null);
+		useLayoutEffect(() => {
+			const anchor = marker.current;
+			const group = anchor.parentElement;
+			const mount = anchor.ownerDocument.createElement('div');
+			mount.className = 'uplink-unblock-menu-position';
+
+			function placeMenu() {
+				const items = [...group.children].filter((node) => node.getAttribute('role') === 'menuitem');
+				const pattern = items.find((node) => node.getAttribute('aria-haspopup') === 'dialog' &&
+					node.textContent.trim() === __('Create pattern'));
+				const groupAction = items.find((node) => node.textContent.trim() === __('Group'));
+				const before = pattern ? pattern.nextSibling : groupAction ?? anchor;
+				mount.classList.toggle('is-before-group', !pattern && !!groupAction);
+				if (before !== mount && (mount.parentNode !== group || mount.nextSibling !== before)) {
+					group.insertBefore(mount, before);
+				}
+			}
+
+			// Core's pattern action is a separate fill and may mount after this one.
+			placeMenu();
+			setHost(mount);
+			const observer = new MutationObserver(placeMenu);
+			observer.observe(group, { childList: true });
+			return () => {
+				observer.disconnect();
+				mount.remove();
+			};
+		}, []);
+
+		return h(Fragment, null, h('span', { hidden: true, ref: marker }), host && createPortal(children, host));
+	}
+
+	function UnblockMenuItems({ clientIds, onClose }) {
+		const registry = useRegistry();
+		const [active, setActive] = useState(null);
+		const { variations, childTypes, siblingTypes, canWrap, canConvert, insideLink, childInsideLink, siblings, start } =
+			useSelect((selectStore) => {
+				const editor = selectStore(blockEditor);
+				const selection = getMenuSelection(editor, clientIds);
+				if (!selection) {
+					return {};
+				}
+				const { ids, root, start } = selection;
+				const single = ids.length === 1 ? ids[0] : null;
+				const insertRoot = getInsertRoot(editor, single);
+				const insideLink = editor.getBlockParents(ids[0]).some((id) => isLinkBlock(editor, id));
+				return {
+					variations: selectStore(blocksStore).getBlockVariations(elementBlock),
+					childTypes: insertRoot && insertableBlockTypes.filter((name) => editor.canInsertBlockType(name, insertRoot)),
+					siblingTypes: insertableBlockTypes.filter((name) => editor.canInsertBlockType(name, root)),
+					canWrap: ids.every((id) => canReplaceBlock(editor, id) && editor.canMoveBlock(id) &&
+						!getBlockType(editor.getBlockName(id))?.parent?.length),
+					canConvert: single && editor.getBlockName(single) === 'core/group' &&
+						canReplaceBlock(editor, single) && !editor.getBlockAttributes(single)?.templateLock,
+					insideLink,
+					childInsideLink: insideLink || (single && isLinkBlock(editor, single)),
+					siblings: editor.getBlocks(root),
+					start,
+				};
+			}, [clientIds]);
+
+		const allowLink = useMemo(() => canWrap && !insideLink && canWrapInLink(siblings.slice(start, start + clientIds.length)),
+			[canWrap, insideLink, siblings, start, clientIds.length]);
+		const actions = unblockActions.flatMap((action) => {
+			if (action.blockName) {
+				const type = getBlockType(action.blockName);
+				return type ? [{ ...action, icon: type.icon }] : [];
+			}
+			const variation = variations?.find(({ name }) => name === action.variation);
+			return variation ? [{ ...action, blockName: elementBlock, variation, icon: variation.icon }] : [];
+		});
+		const inserts = actions.filter((action) => childTypes?.includes(action.blockName) &&
+			(action.variation?.name !== 'anchor' || !childInsideLink));
+		const wrappers = canWrap ? actions.filter((action) => action.wrap && siblingTypes?.includes(action.blockName) &&
+			(action.variation?.name !== 'anchor' || allowLink)) : [];
+		const section = canConvert && siblingTypes?.includes(elementBlock) &&
+			actions.find((action) => action.variation?.name === 'section');
+
+		function run(kind, action) {
+			const editor = registry.select(blockEditor);
+			const selection = getMenuSelection(editor, clientIds);
+			if (!selection) {
+				return;
+			}
+			const { ids } = selection;
+			const editorActions = registry.dispatch(blockEditor);
+			if (kind === 'insert') {
+				const insertRoot = getInsertRoot(editor, ids.length === 1 ? ids[0] : null);
+				if (insertRoot && editor.canInsertBlockType(action.blockName, insertRoot)) {
+					onClose();
+					editorActions.insertBlocks([makeUnblockBlock(action)], editor.getBlockCount(insertRoot), insertRoot);
+				}
+				return;
+			}
+			const blocks = editor.getBlocksByClientId(ids);
+			const group = kind === 'convert' ? blocks[0] : null;
+			// A replaced client ID cannot also appear inside its replacement.
+			const children = group ? group.innerBlocks : blocks.map((block) => cloneBlock(block, {}, block.innerBlocks));
+			const replacement = makeUnblockBlock(action, children, group?.attributes);
+			onClose();
+			editorActions.replaceBlocks(ids, [replacement], 0);
+		}
+
+		const label = h('span', { className: 'uplink-unblock-menu-label' },
+			catalog.unblockIcon && h('img', { src: catalog.unblockIcon, alt: '', width: 16, height: 16 }),
+			__('Unblock', domain),
+		);
+		return section || inserts.length || wrappers.length ? h(PositionedUnblockGroup, null, h(MenuGroup, { label },
+			section && h(MenuItem, {
+				icon: h(BlockIcon, { icon: section.icon }),
+				iconPosition: 'left',
+				onClick: () => run('convert', section),
+			}, __('Convert to Section', domain)),
+			inserts.length > 0 && h(UnblockSubmenu, {
+				kind: 'insert', label: __('Insert', domain), actions: inserts, active, setActive, run,
+			}),
+			wrappers.length > 0 && h(UnblockSubmenu, {
+				kind: 'wrap', label: __('Wrap in', domain), actions: wrappers, active, setActive, run,
+			}),
+		)) : null;
+	}
+
+	function UnblockMenu() {
+		return h(BlockSettingsMenuControls, null, ({ selectedClientIds, onClose }) =>
+			selectedClientIds?.length ? h(UnblockMenuItems, { clientIds: selectedClientIds, onClose }) : null
+		);
 	}
 
 	function hasClass(target, item) {
@@ -429,4 +760,5 @@
 	}
 
 	wp.plugins.registerPlugin('fw-unblock-extender', { render: Sidebar, icon: 'editor-code' });
+	wp.plugins.registerPlugin('fw-unblock-extender-block-actions', { render: UnblockMenu });
 })(window.wp, window.fwUnblockExtender);
