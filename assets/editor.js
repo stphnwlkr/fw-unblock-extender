@@ -10,6 +10,7 @@
 	} = wp.blocks;
 	const { PluginSidebar } = wp.editor;
 	const { BlockIcon, BlockSettingsMenuControls, store: blockEditor } = wp.blockEditor;
+	const blockConversion = window.fwUnblockBlockConversion;
 	const domain = 'fw-unblock-extender';
 	const pageSize = 25;
 	const title = __('Unblock Extender', domain);
@@ -374,7 +375,7 @@
 	function UnblockMenuItems({ clientIds, onClose }) {
 		const registry = useRegistry();
 		const [active, setActive] = useState(null);
-		const { variations, childTypes, siblingTypes, canWrap, canConvert, insideLink, childInsideLink, siblings, start } =
+		const { variations, childTypes, siblingTypes, canWrap, canConvert, canConvertToUnblock, insideLink, childInsideLink, siblings, start } =
 			useSelect((selectStore) => {
 				const editor = selectStore(blockEditor);
 				const selection = getMenuSelection(editor, clientIds);
@@ -393,6 +394,12 @@
 						!getBlockType(editor.getBlockName(id))?.parent?.length),
 					canConvert: single && editor.getBlockName(single) === 'core/group' &&
 						canReplaceBlock(editor, single) && !editor.getBlockAttributes(single)?.templateLock,
+					canConvertToUnblock: typeof window.Unblock?.blocks?.htmlToBlockInstances === 'function' &&
+						editor.canInsertBlockType(elementBlock, root) && ids.every((id) => {
+							const block = editor.getBlock(id);
+							return !getBlockType(block?.name)?.parent?.includes(editor.getBlockName(root)) &&
+								blockConversion.canConvert(block, editor, catalog.conversion);
+						}),
 					insideLink,
 					childInsideLink: insideLink || (single && isLinkBlock(editor, single)),
 					siblings: editor.getBlocks(root),
@@ -434,6 +441,23 @@
 				return;
 			}
 			const blocks = editor.getBlocksByClientId(ids);
+			if (kind === 'convert-blocks') {
+				const parentName = editor.getBlockName(selection.root);
+				const conversions = blocks.map((block) =>
+					!getBlockType(block.name)?.parent?.includes(parentName) &&
+					blockConversion.convert(block, editor, catalog.conversion),
+				);
+				onClose();
+				if (conversions.every(Boolean)) {
+					editorActions.replaceBlocks(ids, conversions.flat(), 0);
+				} else {
+					registry.dispatch(wp.notices.store).createWarningNotice(
+						__('This selection includes a block that cannot be converted safely. The selection was kept as is.', domain),
+						{ type: 'snackbar', id: 'uplink-unblock-conversion' },
+					);
+				}
+				return;
+			}
 			const group = kind === 'convert' ? blocks[0] : null;
 			// A replaced client ID cannot also appear inside its replacement.
 			const children = group ? group.innerBlocks : blocks.map((block) => cloneBlock(block, {}, block.innerBlocks));
@@ -446,12 +470,17 @@
 			catalog.unblockIcon && h('img', { src: catalog.unblockIcon, alt: '', width: 16, height: 16 }),
 			__('Unblock', domain),
 		);
-		return section || inserts.length || wrappers.length ? h(PositionedUnblockGroup, null, h(MenuGroup, { label },
+		return section || canConvertToUnblock || inserts.length || wrappers.length ? h(PositionedUnblockGroup, null, h(MenuGroup, { label },
 			section && h(MenuItem, {
 				icon: h(BlockIcon, { icon: section.icon }),
 				iconPosition: 'left',
 				onClick: () => run('convert', section),
 			}, __('Convert to Section', domain)),
+			canConvertToUnblock && h(MenuItem, {
+				icon: h(BlockIcon, { icon: getBlockType(elementBlock).icon }),
+				iconPosition: 'left',
+				onClick: () => run('convert-blocks'),
+			}, __('Convert to Unblock', domain)),
 			inserts.length > 0 && h(UnblockSubmenu, {
 				kind: 'insert', label: __('Insert', domain), actions: inserts, active, setActive, run,
 			}),

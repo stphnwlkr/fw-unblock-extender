@@ -6,6 +6,7 @@ Unblock Extender adds class and variable autocomplete, CSS recipes, and editor s
 - Type `?` in the CSS editor to find recipes, or type a full trigger such as `?card-stack;` to expand it.
 - Add and import site-wide recipes from the sidebar as a site administrator.
 - Open a block's options in List View and look for the **Unblock** group. **Insert** appends an Unblock block inside the selected block when it accepts children. **Wrap in** places the selection inside an Unblock wrapper. On a Group, **Convert to Section** replaces the Group with an Unblock Section, places its children in the Section's default Container, and preserves the Group's HTML anchor, custom classes, and editor name. The new wrappers use Unblock's default layout and styles.
+- **Convert to Unblock** converts supported WordPress blocks and their eligible children into editable Unblock elements. Select one block or adjacent supported blocks in List View. Dynamic children such as Query Loop keep their WordPress behavior. Some theme styles may need to be reapplied.
 - Press Ctrl+S or Cmd+S in the code editor to save through WordPress.
 
 ## Installation and updates
