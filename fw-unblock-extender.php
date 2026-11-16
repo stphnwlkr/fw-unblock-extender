@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Unblock Extender
  * Description: Extends Unblock with class and variable lookup, custom CSS recipes, and editor shortcuts.
- * Version: 0.8.0
+ * Version: 0.8.2
  * Requires at least: 7.1
  * Requires PHP: 8.4
  * Plugin URI: https://github.com/stphnwlkr/fw-unblock-extender
@@ -22,17 +22,29 @@ use Automatic_CSS\Model\Generated_Inventory;
 
 defined( 'ABSPATH' ) || exit;
 
-const VERSION = '0.8.0';
+const VERSION = '0.8.2';
 const HANDLE  = 'fw-unblock-extender';
 
 require_once __DIR__ . '/recipes.php';
 require_once __DIR__ . '/updates.php';
 
 add_filter( 'render_block_unblock/element', __NAMESPACE__ . '\\enqueue_conversion_styles', 10, 2 );
+add_action( 'enqueue_block_assets', __NAMESPACE__ . '\\enqueue_acss_compatibility' );
 add_action( 'enqueue_block_editor_assets', __NAMESPACE__ . '\\enqueue_editor', 20 );
 add_action( 'plugins_loaded', static function (): void {
 	remove_action( 'enqueue_block_editor_assets', 'Uplink\\ACSS_For_Unblock\\enqueue_editor', 20 );
 } );
+
+/**
+ * Restore ACSS button text styles in Unblock sections on the front end and in the editor canvas.
+ */
+function enqueue_acss_compatibility(): void {
+	if ( ! defined( 'UNBK_VERSION' ) || ! class_exists( API::class ) ) {
+		return;
+	}
+
+	wp_enqueue_style( HANDLE . '-acss', plugins_url( 'assets/acss-compatibility.css', __FILE__ ), array(), VERSION );
+}
 
 /**
  * Load the recipe library and the ACSS catalog when ACSS is available.

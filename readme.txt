@@ -2,7 +2,7 @@
 Requires at least: 7.1
 Tested up to: 7.2
 Requires PHP: 8.4
-Stable tag: 0.8.0
+Stable tag: 0.8.2
 License: GPL-2.0-or-later
 
 Adds class and variable lookup, CSS recipes, and editor shortcuts to Unblock.
@@ -16,6 +16,14 @@ Site administrators can add CSS recipes or import a JSON file from the Recipes p
 In List View, open a block's options and look for the Unblock group. Use Insert to append a child inside the selected block, or Wrap in to enclose the selection in an Unblock wrapper. On a Group, Convert to Section puts the Group's children in the Section's default Container and carries the Group's HTML anchor, custom classes, and editor name to the Section. The new wrappers use Unblock's default layout and styles.
 
 Choose Convert to Unblock to turn supported WordPress blocks into editable Unblock elements. This works on a single block or a contiguous selection of supported sibling blocks. Nested blocks with dynamic behavior, such as Query Loop, stay in place. Theme styles attached to the original block type may need to be reapplied.
+
+== Automatic.css button styles and cascade layers ==
+
+Unblock's unlayered section reset can override layered Automatic.css (ACSS) text color and decoration on links styled as buttons. Unblock Extender restores the ACSS text tokens on links with a `btn--` class inside Unblock sections, including hover and keyboard focus. The fix works with layers enabled or disabled.
+
+If button text still looks wrong, go to Options > Layer Controls in the ACSS dashboard, turn off Buttons & Links, and save. Recheck the front end and the editor. This removes the layer while keeping the button styles enabled.
+
+For similar conflicts, inspect the affected property in your browser's Styles panel. If an unlayered rule wins over an ACSS layer, toggle the layer for that feature and recheck. Include the affected property, both selectors, and the layer name when reporting a conflict.
 
 == Recipe import ==
 
@@ -38,6 +46,10 @@ Install version 0.5.0 or later once from the GitHub release ZIP. New stable rele
 Unblock Extender is provided as is, without warranty of any kind, express or implied, including the implied warranties of merchantability and fitness for a particular purpose.
 
 == Changelog ==
+
+= 0.8.2 =
+* Fixed Automatic.css button link text color and decoration inside Unblock sections.
+* Documented the Buttons & Links layer workaround and how to diagnose similar cascade conflicts.
 
 = 0.8.0 =
 * Added Convert to Unblock to the block options menu for supported WordPress blocks.

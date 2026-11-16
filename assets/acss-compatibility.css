@@ -1,0 +1,17 @@
+/* Outrank Unblock's unlayered link reset while allowing explicit button styles. */
+:where([data-unbk-section]) a:where([class^="btn--"], [class*=" btn--"]):where(:not(.btn--none, .wp-block-button)) {
+	color: var(--btn-text-color, inherit);
+	text-decoration: var(--btn-text-decoration, inherit);
+
+	&:focus-visible {
+		color: var(--btn-text-color-hover, var(--btn-text-color, inherit));
+		text-decoration: var(--btn-text-decoration-hover, var(--btn-text-decoration, inherit));
+	}
+
+	@media (hover: hover) and (pointer: fine) {
+		&:where(:hover) {
+			color: var(--btn-text-color-hover, var(--btn-text-color, inherit));
+			text-decoration: var(--btn-text-decoration-hover, var(--btn-text-decoration, inherit));
+		}
+	}
+}

@@ -21,6 +21,16 @@ Starting with 0.5.0, stable GitHub releases appear in the WordPress **Plugins** 
 
 See [RELEASING.md](RELEASING.md) for publishing instructions. Licensed under GPL-2.0-or-later.
 
+## Automatic.css button styles and cascade layers
+
+Unblock's section reset tells links with a class to inherit text color and decoration. When Automatic.css (ACSS) puts its button rules inside a CSS layer, the unlayered reset can win before the browser compares selector specificity.
+
+Unblock Extender restores the ACSS text color and decoration tokens on links with a `btn--` class inside Unblock sections, including hover and keyboard focus. The fix works with ACSS layers enabled or disabled.
+
+If button text still looks wrong, open the ACSS dashboard and go to **Options → Layer Controls**. Turn off **Buttons & Links**, save, and recheck the button on the front end and in the editor. This removes the layer from those rules while keeping the button styles enabled.
+
+For a similar conflict, inspect the affected property in your browser's **Styles** panel. If an unlayered declaration overrides a layered ACSS rule, toggle only the layer for that feature and check the result. When reporting a conflict, include the affected property, both selectors, and the ACSS layer name.
+
 ## Warranty
 
 Unblock Extender is provided as is, without warranty of any kind, express or implied, including the implied warranties of merchantability and fitness for a particular purpose.
